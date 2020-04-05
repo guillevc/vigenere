@@ -7,25 +7,15 @@ import argparse
 
 def main():  
     parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
-        add_help=True)
+        add_help=False)
     parser.add_argument('-i', metavar='INPUT', nargs='?', type=argparse.FileType(), 
-        help='Path for the input file.')
+        help='Path for the input file.', required=True)
     parser.add_argument('-d', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
-        help='Path for the dictionary file.')
+        help='Path for the dictionary file.', required=True)
     parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
-        help='Path for the hash file.')
+        help='Path for the hash file.', required=True)
     args = parser.parse_args()
-
-    if (not args.i):
-        print('Path for the input file needed.')
-        sys.exit()
-    if (not args.d):
-        print('Path for the dictionary file needed.')
-        sys.exit()
-    if (not args.hash):
-        print('Path for the hash file needed.')
-        sys.exit()
-
+    
     proccessed_text = args.i.read()
     dictionary_text = args.d.read()
     hash_text = args.hash.read()
