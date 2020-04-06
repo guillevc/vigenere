@@ -5,20 +5,150 @@ import os
 import sys
 import argparse
 
+MAX_KEY_LENGTH = 10
+
 def main():  
-    parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
-        add_help=False)
-    parser.add_argument('-i', metavar='INPUT', nargs='?', type=argparse.FileType(), 
-        help='Path for the input file.', required=True)
-    parser.add_argument('-d', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
-        help='Path for the dictionary file.', required=True)
-    parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
-        help='Path for the hash file.', required=True)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
+    #     add_help=False)
+    # parser.add_argument('-i', metavar='INPUT', nargs='?', type=argparse.FileType(), 
+    #     help='Path for the input file.', required=True)
+    # parser.add_argument('-d', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
+    #     help='Path for the dictionary file.', required=True)
+    # parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
+    #     help='Path for the hash file.', required=True)
+    # args = parser.parse_args()
     
-    proccessed_text = args.i.read()
-    dictionary_text = args.d.read()
-    hash_text = args.hash.read()
+    # proccessed_text = args.i.read()
+    # dictionary_text = args.d.read()
+    # hash_text = args.hash.read()
+
+    proccessed_text = 'CUMDILHUQPCRLNXAYNQGZWQZCYECILNLXANNGCQZFNRSSSUSEBQPUSPHREIOFVKTMGEBDGCBECLDXZEUNCJDCJDEOZWFXMFNNEZNWDDMSZCSFHKPMRLLZYMNXCRAUHOQGTFDDILPMHXJKPLZYMNXQZCYLLSKZWJEBDDSREYLTHZHUXHBHNBHDHNEXHQZHNOKEZNCUJYIVWYCRYZMFDAYQDIMEIQPPDCMDXIQPUCGUMNYCXUKHUQPORPMZEYBSHHBODNUKWYCNLXANNGCQLFDINNCNHZHHYQGTWGTNDYWQJJSDNGPPHNNHXMETFDDGZVCMRNGPGHYUBNYRDCAWYZYXCPGZYXRLLZYMNXJZJGDYNSZXDNLXANSSYLTHZALNAYQWSHXJKPGDYNDOWQJJSZPHCUKPRSZLSTIMLNSLWJCYBZPDCCMRNGPZHWYRHCSSITENGPXDNLXANHZHJPSHDUMTHSCUBEUAWYOCIAWYLLHCOCEQCBFFSEISCUBPXHRCSLFBFLQPHBTYRDOBSURFEZDBNCVHEWNTHZYXNEBDCWQJJSZWTCLDYWXLLDFMDOZNCNGPLZYMNXMLLEHYASCUBTHFLHCALNDYBFNHYASSYOPLOPNQLNNCMCTZETWTWNQLHRZGVLLDLNSLWJDUQPNXACBLFKJWZCLHPXNFNTDCMRUSCIILHSSUSTMCTMFFCRPXZDUKPAHECLLNDQCKPNGLNSSYTDYQTMSCCBVYCTHSZXNHHKZUCTHFZLNAYMTHFHBDYCSLLQTPDDURLHDXUHWUSEUBSGDYNGZQDGYQZHDSCFSJQZZHWYDIULAFDEBDHUMYUBCSVZLLELZGYKWYCLOSZGZECBLFKJVDEQDPHBZGOFNDCMVTNGZOSFMDCCMEYQLWSTIMDNZCNHYAECILLLNFHCEBDFMDZZQLHRZGVLLDDWZXMGLMFCIVYCMEYQYUSTIMLFKJNGPLDHYQPGHWFHZHQLHRZGVLLDLNSLWJDCMEBDQCQDNRTRLZHSSMNQNGTMLLLJDUHYWQPURPIUPLSSCRDULPNHXYECULPCMTHIFHDGYMOIQXWZQYDCYKPURPXCLNZDBNHCMRNGLNHEBZOWNWFDNNDOGNCYSSUMOITMFDEBDYOLMYQZZRLGOWYRZZQLHRZGVLLDEBZEKTLLSPLSSUMTNGLXHYNGPMZXYPFUQEYQZZSSYOCYUTITDSDLLBCSOEIKZWJPLVLMOLLSTWTWUQWSRFWBPMRQOKALNNOQTHFLHDDNHXUSPXTDGHWFHZHAPZNCYHEQZDNZVYMOIVYVXLOSSIQTNHPMZYXBCSOEIVLFKHURPMSTGZEYCMSSSYTDZDOYQLFAFLDLONQCMGYRECFLNHZHEMCSZBZGYZNWQFYCZPDCORXCKWCNYVXUOMP'
+    dictionary_text = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    hash_text = '00c6d6db4c17e3bf8d8cbf972ad5a3bd417eff5d120ca65ddf60fa9b7b33463d'
+
+    hack_vigenere = get_key_lengths(hack_vigenere)
+    print(hack_vigenere)
+    
+def get_key_lengths(ciphertext):
+    # Find out the sequences of 3 to 6 letters that occur multiple times
+    # in the ciphertext. repeated_sequences_spacings has a value like:
+    # {'EXG': [192], 'NAF': [339, 972, 633], ... }
+    repeated_sequences_spacings = get_repeated_sequences_spacings(ciphertext)
+
+    # See get_most_common_factors() for a description of seq_factors.
+    seq_factors = {}
+    for seq in repeated_sequences_spacings:
+        seq_factors[seq] = []
+        for spacing in repeated_sequences_spacings[seq]:
+            seq_factors[seq].extend(get_useful_factors(spacing))
+
+    # See get_most_common_factors() for a description of factors_by_count.
+    factors_by_count = get_most_common_factors(seq_factors)
+
+    # Now we extract the factor counts from factors_by_count and
+    # put them in all_likely_key_lenghts so that they are easier to
+    # use later.
+    all_likely_key_lengths = []
+    for (factor, count) in factors_by_count:
+        all_likely_key_lengths.append(factor)
+
+    return all_likely_key_lengths
+
+def get_useful_factors(num):
+    # Returns a list of useful factors of num. By "useful" we mean factors
+    # less than MAX_KEY_LENGTH + 1. For example, get_useful_factors(144)
+    # returns [2, 72, 3, 48, 4, 36, 6, 24, 8, 18, 9, 16, 12]
+
+    if num < 2:
+        return [] # numbers less than 2 have no useful factors
+
+    factors = [] # the list of factors found
+
+    # When finding factors, you only need to check the integers up to
+    # MAX_KEY_LENGTH.
+    for i in range(2, MAX_KEY_LENGTH + 1): # don't test 1
+        if num % i == 0:
+            factors.append(i)
+            factors.append(int(num / i))
+    if 1 in factors:
+        factors.remove(1)
+    return list(set(factors))
+    
+def get_most_common_factors(seq_factors):
+    # First, get a count of how many times a factor occurs in seq_factors.
+    factor_counts = {} # key is a factor, value is how often if occurs
+
+    # seq_factors keys are sequences, values are lists of factors of the
+    # spacings. seq_factors has a value like: {'GFD': [2, 3, 4, 6, 9, 12,
+    # 18, 23, 36, 46, 69, 92, 138, 207], 'ALW': [2, 3, 4, 6, ...], ...}
+    for seq in seq_factors:
+        factor_list = seq_factors[seq]
+        for factor in factor_list:
+            if factor not in factor_counts:
+                factor_counts[factor] = 0
+            factor_counts[factor] += 1
+
+    # Second, put the factor and its count into a tuple, and make a list
+    # of these tuples so we can sort them.
+    factors_by_count = []
+    for factor in factor_counts:
+        # exclude factors larger than MAX_KEY_LENGTH
+        if factor <= MAX_KEY_LENGTH:
+            # factors_by_count is a list of tuples: (factor, factorCount)
+            # factors_by_count has a value like: [(3, 497), (2, 487), ...]
+            factors_by_count.append((factor, factor_counts[factor]))
+
+    # Sort the list by the factor count.
+    factors_by_count.sort(key=lambda x: x[1], reverse=True)
+
+    return factors_by_count
+
+def get_repeated_sequences_spacings(proccessed_text):
+    # dict de secuencias {secuencia, [lista espacios entre secuencias]}
+    sequences_spacings = {}
+    for sequence_len in range(3, 7):
+        for seq_start in range(len(proccessed_text) - sequence_len):
+            # Determine what the sequence is, and store it in seq
+            seq = proccessed_text[seq_start:seq_start + sequence_len]
+            # Look for this sequence in the rest of the message
+            for i in range(seq_start + sequence_len, len(proccessed_text) - sequence_len):
+                if proccessed_text[i:i + sequence_len] == seq:
+                    if seq not in sequences_spacings:
+                        sequences_spacings[seq] = []
+                    # Metemos en la lista de espacios la diferencia entre cada secuencia.
+                    sequences_spacings[seq].append(i - seq_start)
+    return sequences_spacings
+
+def hack_vigenere(ciphertext):
+    # Likely key lenghts
+    key_lengths = get_key_lengths(ciphertext)
+
+    key_length_str = ''
+    for keyLength in all_likely_key_lenghts:
+        key_length_str += '%s ' % (keyLength)
+    print('Kasiski Examination results say the most likely key lengths are: ' + key_length_str + '\n')
+
+    for key_length in key_lengths:
+        if not SILENT_MODE:
+            print('Attempting hack with key length %s (%s possible keys)...' % (keyLength, NUM_MOST_FREQ_LETTERS ** keyLength))
+        hackedMessage = attemptHackWithKeyLength(ciphertext, keyLength)
+        if hackedMessage != None:
+            break
+
+    # If none of the key lengths we found using Kasiski Examination
+    # worked, start brute-forcing through key lengths.
+    if hackedMessage == None:
+        if not SILENT_MODE:
+            print('Unable to hack message with likely key length(s). Brute forcing key length...')
+        for keyLength in range(1, MAX_KEY_LENGTH + 1):
+            # don't re-check key lengths already tried from Kasiski
+            if keyLength not in all_likely_key_lenghts:
+                if not SILENT_MODE:
+                    print('Attempting hack with key length %s (%s possible keys)...' % (keyLength, NUM_MOST_FREQ_LETTERS ** keyLength))
+                hackedMessage = attemptHackWithKeyLength(ciphertext, keyLength)
+                if hackedMessage != None:
+                    break
+    return hackedMessage
 
 # Source: https://gist.github.com/dssstr/aedbb5e9f2185f366c6d6b50fad3e4a4
 def encrypt(plaintext, key, dictionary):
@@ -42,7 +172,6 @@ def decrypt(ciphertext, key, dictionary):
         value = (ciphertext_indexes[i] - key_indexes[i % key_length]) % dictionary_length
         plaintext += dictionary[value]
     return plaintext
-
 
 if __name__ == "__main__":
     main()
