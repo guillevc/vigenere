@@ -4,30 +4,33 @@
 import os
 import sys
 import argparse
+import itertools
+import hashlib
 
 MAX_KEY_LENGTH = 10
+NUM_MOST_FREQ_LETTERS = 4
 
 def main():  
-    # parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
-    #     add_help=False)
-    # parser.add_argument('-i', metavar='INPUT', nargs='?', type=argparse.FileType(), 
-    #     help='Path for the input file.', required=True)
-    # parser.add_argument('-d', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
-    #     help='Path for the dictionary file.', required=True)
-    # parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
-    #     help='Path for the hash file.', required=True)
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
+        add_help=False)
+    parser.add_argument('-i', metavar='INPUT', nargs='?', type=argparse.FileType(), 
+        help='Path for the input file.', required=True)
+    parser.add_argument('-d', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
+        help='Path for the dictionary file.', required=True)
+    parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
+        help='Path for the hash file.', required=True)
+    args = parser.parse_args()
     
-    # proccessed_text = args.i.read()
-    # dictionary_text = args.d.read()
-    # hash_text = args.hash.read()
+    proccessed_text = args.i.read().strip().replace('\xc3\x91', 'Ñ')
+    dictionary_text = args.d.read().strip().replace('\xc3\x91', 'Ñ')
+    hash_text = args.hash.read().strip()
 
-    proccessed_text = 'CUMDILHUQPCRLNXAYNQGZWQZCYECILNLXANNGCQZFNRSSSUSEBQPUSPHREIOFVKTMGEBDGCBECLDXZEUNCJDCJDEOZWFXMFNNEZNWDDMSZCSFHKPMRLLZYMNXCRAUHOQGTFDDILPMHXJKPLZYMNXQZCYLLSKZWJEBDDSREYLTHZHUXHBHNBHDHNEXHQZHNOKEZNCUJYIVWYCRYZMFDAYQDIMEIQPPDCMDXIQPUCGUMNYCXUKHUQPORPMZEYBSHHBODNUKWYCNLXANNGCQLFDINNCNHZHHYQGTWGTNDYWQJJSDNGPPHNNHXMETFDDGZVCMRNGPGHYUBNYRDCAWYZYXCPGZYXRLLZYMNXJZJGDYNSZXDNLXANSSYLTHZALNAYQWSHXJKPGDYNDOWQJJSZPHCUKPRSZLSTIMLNSLWJCYBZPDCCMRNGPZHWYRHCSSITENGPXDNLXANHZHJPSHDUMTHSCUBEUAWYOCIAWYLLHCOCEQCBFFSEISCUBPXHRCSLFBFLQPHBTYRDOBSURFEZDBNCVHEWNTHZYXNEBDCWQJJSZWTCLDYWXLLDFMDOZNCNGPLZYMNXMLLEHYASCUBTHFLHCALNDYBFNHYASSYOPLOPNQLNNCMCTZETWTWNQLHRZGVLLDLNSLWJDUQPNXACBLFKJWZCLHPXNFNTDCMRUSCIILHSSUSTMCTMFFCRPXZDUKPAHECLLNDQCKPNGLNSSYTDYQTMSCCBVYCTHSZXNHHKZUCTHFZLNAYMTHFHBDYCSLLQTPDDURLHDXUHWUSEUBSGDYNGZQDGYQZHDSCFSJQZZHWYDIULAFDEBDHUMYUBCSVZLLELZGYKWYCLOSZGZECBLFKJVDEQDPHBZGOFNDCMVTNGZOSFMDCCMEYQLWSTIMDNZCNHYAECILLLNFHCEBDFMDZZQLHRZGVLLDDWZXMGLMFCIVYCMEYQYUSTIMLFKJNGPLDHYQPGHWFHZHQLHRZGVLLDLNSLWJDCMEBDQCQDNRTRLZHSSMNQNGTMLLLJDUHYWQPURPIUPLSSCRDULPNHXYECULPCMTHIFHDGYMOIQXWZQYDCYKPURPXCLNZDBNHCMRNGLNHEBZOWNWFDNNDOGNCYSSUMOITMFDEBDYOLMYQZZRLGOWYRZZQLHRZGVLLDEBZEKTLLSPLSSUMTNGLXHYNGPMZXYPFUQEYQZZSSYOCYUTITDSDLLBCSOEIKZWJPLVLMOLLSTWTWUQWSRFWBPMRQOKALNNOQTHFLHDDNHXUSPXTDGHWFHZHAPZNCYHEQZDNZVYMOIVYVXLOSSIQTNHPMZYXBCSOEIVLFKHURPMSTGZEYCMSSSYTDZDOYQLFAFLDLONQCMGYRECFLNHZHEMCSZBZGYZNWQFYCZPDCORXCKWCNYVXUOMP'
-    dictionary_text = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    hash_text = '00c6d6db4c17e3bf8d8cbf972ad5a3bd417eff5d120ca65ddf60fa9b7b33463d'
-
-    hack_vigenere = get_key_lengths(hack_vigenere)
-    print(hack_vigenere)
+    # proccessed_text = 'EYKANGBAFUMMAQCZAJJUNIJNTXUTOJYCORKRAJYMAZYRIGFSASCTAXCOAIBINGKARGBACKMFRKHTEGFCOXJNABCRUYKORRCLLUHESJYEUXJSSKAUNNUEXVFICGXOEYÑEMÑYRCUFESKFMISCSTXJDEYUNIJUDSGFVAJJRIQFASKÑRAZUDERUSCGMILQUSGAUNTKNYMGÑERÑULDKKROZYCCÑJNTKNTRGKIDUNYEWOIPUNDEXYSPÑMACÑJNAYCSTÑXAIRKREYWINJCBLKNPAXULOYKACÑYNTKNMAYARABYSCUHCOBCDEYÑASKGANGÑENJMEMUNUNGKRIRYRAKHTRKAADKGATKMIAQYSHGUVASTADUBEMUNCORKRAJJYPGAADUGILQJNEYXEMGNCAXCLLGNQUKYMPKTARGHALQYGAXSAYYYGUÑMANQFEGGHDOJORASÑELGNPRURIMGNOCNJSERUNAYFLEMURASGILQJNEYXEGAUNTKNDUXUNTKFASVMOXÑGASICNCUNEMGHASKHCUGHTOGÑESZMAPÑXOSNYMOYUDQACRIJJMIQFONKNPAXULOYGESKNDERURZUSABXCLAJYMAYMECÑVIRKGOSKLUIVJSDKMESVCRAICONGNISZCDAJORASÑELUNMEYYSDKUBRÑFAJAHIONUEXVFICGXOIQFAEYÑAMUNGEYÑIOSUNDUFACUGPRGXEMGNEQACPOYBAASUDIJJELXYSPUHSAHFEDKNANÑXADNUREIJRDGXOQAYELMJBIKMNONUREVURTÑXOCGNISKCSMÑFLOSYSDKGASIURIQFASAHASICFRGNQUKXESMMANGMAEQDUEBYSESYLCUHGRKNOAJYMAYYLEOYCUZCVOKNTAGWTIBUNDUFAFGVRIIUCIUHNAICONGFDEZJDAYYSTGNCAZYGOXCASJYPRUXUCZJSRKNPIXUDOXYSMGÑERÑULDKKROZYCCÑJNYZYSTXUPIJJSEQGINÑNTRUBAAMMADKWIDUYLCUGPRUGISUXELGNEMVMESGNESVUNOQUSPGMAAJUPTGMSUYFINKUSDKKROJOCCÑJNAQUFAHMICGWIOSXEEYÑOSRUTEXCALKNYANUYDUNEMVMESGNQUKZABXCCASMESVCRAJJREYYNEYKANG'
+    # dictionary_text = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'
+    # hash_text = '5442d541845e30ef6af885af537d41d35b2fa5e21fb47a5eae98043c441362e1'
+    
+    asdf = hack_vigenere(proccessed_text, dictionary_text, hash_text)
+    print(asdf)
     
 def get_key_lengths(ciphertext):
     # Find out the sequences of 3 to 6 letters that occur multiple times
@@ -119,36 +122,24 @@ def get_repeated_sequences_spacings(proccessed_text):
                     sequences_spacings[seq].append(i - seq_start)
     return sequences_spacings
 
-def hack_vigenere(ciphertext):
+def hack_vigenere(ciphertext, dictionary, hash_text):
     # Likely key lenghts
-    key_lengths = get_key_lengths(ciphertext)
+    all_likely_key_lenghts = get_key_lengths(ciphertext)
 
-    key_length_str = ''
-    for keyLength in all_likely_key_lenghts:
-        key_length_str += '%s ' % (keyLength)
-    print('Kasiski Examination results say the most likely key lengths are: ' + key_length_str + '\n')
+    for key_length in all_likely_key_lenghts:
+        print('Attempting with key length {}...'.format(key_length))
+        key = attempt_hack_with_key_length(ciphertext, key_length, dictionary, hash_text)
+        if (key != None):
+            return key
 
-    for key_length in key_lengths:
-        if not SILENT_MODE:
-            print('Attempting hack with key length %s (%s possible keys)...' % (keyLength, NUM_MOST_FREQ_LETTERS ** keyLength))
-        hackedMessage = attemptHackWithKeyLength(ciphertext, keyLength)
-        if hackedMessage != None:
-            break
-
-    # If none of the key lengths we found using Kasiski Examination
-    # worked, start brute-forcing through key lengths.
-    if hackedMessage == None:
-        if not SILENT_MODE:
-            print('Unable to hack message with likely key length(s). Brute forcing key length...')
-        for keyLength in range(1, MAX_KEY_LENGTH + 1):
-            # don't re-check key lengths already tried from Kasiski
-            if keyLength not in all_likely_key_lenghts:
-                if not SILENT_MODE:
-                    print('Attempting hack with key length %s (%s possible keys)...' % (keyLength, NUM_MOST_FREQ_LETTERS ** keyLength))
-                hackedMessage = attemptHackWithKeyLength(ciphertext, keyLength)
-                if hackedMessage != None:
-                    break
-    return hackedMessage
+def attempt_hack_with_key_length(ciphertext, most_likely_key_length, dictionary, hash_text):
+    for combination in itertools.product(dictionary, repeat=most_likely_key_length):
+        key = ''.join(combination)
+        print(key)
+        decrypted_text = decrypt(ciphertext, key, dictionary)
+        hashed_message = hashlib.sha256(decrypted_text.encode('utf-8')).hexdigest()
+        if (hashed_message == hash_text):
+            return key
 
 # Source: https://gist.github.com/dssstr/aedbb5e9f2185f366c6d6b50fad3e4a4
 def encrypt(plaintext, key, dictionary):
@@ -173,5 +164,5 @@ def decrypt(ciphertext, key, dictionary):
         plaintext += dictionary[value]
     return plaintext
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
