@@ -7,28 +7,29 @@ import argparse
 import itertools
 import hashlib
 import time
+import logging
 
 MAX_KEY_LENGTH = 10
 
-def main():  
-    parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.', 
+def main():
+    parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.',
         add_help=False)
-    parser.add_argument('-i', '--input', metavar='INPUT', nargs='?', type=argparse.FileType(), 
+    parser.add_argument('-i', '--input', metavar='INPUT', nargs='?', type=argparse.FileType(),
         help='Path for the input file.', required=True)
-    parser.add_argument('-d', '--dictionary', metavar='DICTIONARY', nargs='?', type=argparse.FileType(), 
+    parser.add_argument('-d', '--dictionary', metavar='DICTIONARY', nargs='?', type=argparse.FileType(),
         help='Path for the dictionary file.', required=True)
-    parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(), 
+    parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(),
         help='Path for the hash file.', required=True)
     args = parser.parse_args()
-    
+
     proccessed_text = args.input.read().strip()
     dictionary_text = args.dictionary.read().strip()
     hash_text = args.hash.read().strip()
-    
+
     # proccessed_text = 'EYKANGBAFUMMAQCZAJJUNIJNTXUTOJYCORKRAJYMAZYRIGFSASCTAXCOAIBINGKARGBACKMFRKHTEGFCOXJNABCRUYKORRCLLUHESJYEUXJSSKAUNNUEXVFICGXOEYÑEMÑYRCUFESKFMISCSTXJDEYUNIJUDSGFVAJJRIQFASKÑRAZUDERUSCGMILQUSGAUNTKNYMGÑERÑULDKKROZYCCÑJNTKNTRGKIDUNYEWOIPUNDEXYSPÑMACÑJNAYCSTÑXAIRKREYWINJCBLKNPAXULOYKACÑYNTKNMAYARABYSCUHCOBCDEYÑASKGANGÑENJMEMUNUNGKRIRYRAKHTRKAADKGATKMIAQYSHGUVASTADUBEMUNCORKRAJJYPGAADUGILQJNEYXEMGNCAXCLLGNQUKYMPKTARGHALQYGAXSAYYYGUÑMANQFEGGHDOJORASÑELGNPRURIMGNOCNJSERUNAYFLEMURASGILQJNEYXEGAUNTKNDUXUNTKFASVMOXÑGASICNCUNEMGHASKHCUGHTOGÑESZMAPÑXOSNYMOYUDQACRIJJMIQFONKNPAXULOYGESKNDERURZUSABXCLAJYMAYMECÑVIRKGOSKLUIVJSDKMESVCRAICONGNISZCDAJORASÑELUNMEYYSDKUBRÑFAJAHIONUEXVFICGXOIQFAEYÑAMUNGEYÑIOSUNDUFACUGPRGXEMGNEQACPOYBAASUDIJJELXYSPUHSAHFEDKNANÑXADNUREIJRDGXOQAYELMJBIKMNONUREVURTÑXOCGNISKCSMÑFLOSYSDKGASIURIQFASAHASICFRGNQUKXESMMANGMAEQDUEBYSESYLCUHGRKNOAJYMAYYLEOYCUZCVOKNTAGWTIBUNDUFAFGVRIIUCIUHNAICONGFDEZJDAYYSTGNCAZYGOXCASJYPRUXUCZJSRKNPIXUDOXYSMGÑERÑULDKKROZYCCÑJNYZYSTXUPIJJSEQGINÑNTRUBAAMMADKWIDUYLCUGPRUGISUXELGNEMVMESGNESVUNOQUSPGMAAJUPTGMSUYFINKUSDKKROJOCCÑJNAQUFAHMICGWIOSXEEYÑOSRUTEXCALKNYANUYDUNEMVMESGNQUKZABXCCASMESVCRAJJREYYNEYKANG'
     # dictionary_text = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'
     # hash_text = '5442d541845e30ef6af885af537d41d35b2fa5e21fb47a5eae98043c441362e1'
-    
+
     start_time = time.time()
     key = guess_key(proccessed_text, dictionary_text, hash_text)
     print('Successfully guessed key {} in {} seconds'.format(key, time.time() - start_time))
@@ -51,7 +52,7 @@ def guess_key_attempt_with_key_length(ciphertext, most_likely_key_length, dictio
         hashed_message = hashlib.sha256(decrypted_text.encode('utf-8')).hexdigest()
         if (hashed_message == hash_text):
             return key
-    
+
 def get_key_lengths(ciphertext):
     # Find out the sequences of 3 to 6 letters that occur multiple times
     # in the ciphertext. repeated_sequences_spacings has a value like:
@@ -73,7 +74,7 @@ def get_key_lengths(ciphertext):
             factors_by_count[factor] = 0
         else:
             factors_by_count[factor] += 1
-    key_lenghts = [k for (k, v) in sorted(factors_by_count.items(), key=lambda item: item[1], reverse=True)][0:10]
+    key_lenghts = [k for (k, v) in sorted(factors_by_count.items(), key=lambda item: item[1], reverse=True)]
 
     print(key_lenghts)
     return key_lenghts
