@@ -10,18 +10,35 @@ import time
 import logging
 import collections
 
+logger = logging.getLogger(__name__)
+
 MAX_KEY_LENGTH = 10
+MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U', 'M', 'P', 'B', 'G', 'V', 'Y', 'Q', 'H', 'F', 'Z', 'J', 'Ñ', 'X', 'K', 'W']
+MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
 
 def main():
     parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.',
-        add_help=False)
+        add_help=True)
     parser.add_argument('-i', '--input', metavar='INPUT', nargs='?', type=argparse.FileType(),
         help='Path for the input file.', required=True)
     parser.add_argument('-d', '--dictionary', metavar='DICTIONARY', nargs='?', type=argparse.FileType(),
         help='Path for the dictionary file.', required=True)
     parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(),
         help='Path for the hash file.', required=True)
+    parser.add_argument(
+        '--debug',
+        help="Print lots of debugging statements",
+        action="store_const", dest="loglevel", const=logging.DEBUG,
+        default=logging.WARNING
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        help="Be verbose",
+        action="store_const", dest="loglevel", const=logging.INFO
+    )
     args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=args.loglevel)
 
     proccessed_text = args.input.read().strip()
     dictionary_text = args.dictionary.read().strip()
@@ -40,55 +57,66 @@ def main():
 
 def guess_key(ciphertext, dictionary, dictionary_char_to_index, dictionary_index_to_char, hash_text):
     key_lenghts = get_key_lengths(ciphertext)
-    print(key_lenghts)
+    logger.info('These are the key lengths guessed {}'.format(key_lenghts))
 
     for key_length in key_lenghts:
-        if (key_length != 6):
-            continue
-        print('Attempting with key length {}...'.format(key_length))
+
+        logger.info('Attempting with key length of {}...'.format(key_length))
         key = guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to_index, dictionary_index_to_char, hash_text)
         if (key != None):
             return key
     return None
 
 def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to_index, dictionary_index_to_char, hash_text):
-    # for combination in itertools.product(dictionary, repeat=key_length):
-    #     key = ''.join(combination)
-    #     #print('Testing with key {}'.format(key))
-    #     decrypted_text = decrypt(ciphertext, key, dictionary)
-    #     hashed_message = hashlib.sha256(decrypted_text.encode('utf-8')).hexdigest()
-    #     if (hashed_message == hash_text):
-    #         return key
-
-    #print(most_common_characters(ciphertext, 10))
-    probable_characters = []
+    probable_characters_every_row = []
     for i in range(key_length):
         ciphertext_sample = ciphertext
-        col = ciphertext_sample[i::key_length + i]
+        col = ciphertext_sample[i::key_length]
+        top_most_common_characters = [c for (c, _) in most_common_characters(col, 5)]
+        logger.debug('most common of row {}: {}'.format(i, top_most_common_characters))
         most_common_character = most_common_characters(col, 1)[0][0]
-        print(i, most_common_characters(col, 5))
-        probable_characters.append(guess_probable_characters(most_common_character, key_length, dictionary_char_to_index, dictionary_index_to_char))
-    print(probable_characters)
+        #probable_characters = guess_probable_characters_from_top_most_common(top_most_common_characters, key_length, dictionary_char_to_index, dictionary_index_to_char)
+        probable_characters = guess_probable_characters_from_most_common(most_common_character, key_length, dictionary_char_to_index, dictionary_index_to_char)
+        probable_characters_every_row.append(probable_characters)
 
-    for combination in itertools.product(*probable_characters):
+    logger.info('Probable characters for each key index are {}'.format(probable_characters_every_row))
+
+    ciphertext_indexes = [dictionary_char_to_index.get(c) for c in ciphertext]
+    ciphertext_lenght = len(ciphertext)
+    dictionary_length = len(dictionary_char_to_index.keys())
+
+    for combination in itertools.product(*probable_characters_every_row):
         key = ''.join(combination)
-        print(key)
-        decrypted_text = decrypt(ciphertext, key, dictionary_char_to_index, dictionary_index_to_char)
+        logger.debug(key)
+        decrypted_text = decrypt(ciphertext_indexes, ciphertext_lenght, key, dictionary_length, dictionary_char_to_index, dictionary_index_to_char)
         hashed_message = hashlib.sha256(decrypted_text.encode('utf-8')).hexdigest()
         if (hashed_message == hash_text):
             return key
 
-MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U', 'M', 'P', 'B', 'G', 'V', 'Y', 'Q', 'H', 'F', 'Z', 'J', 'Ñ', 'X', 'K', 'W']
-MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
-
-def guess_probable_characters(character, key_length, dictionary_char_to_index, dictionary_index_to_char):
+def guess_probable_characters_from_top_most_common(most_common_characters, key_length, dictionary_char_to_index, dictionary_index_to_char):
     dictionary_chars = dictionary_char_to_index.keys()
     dictionary_length = len(dictionary_chars)
     if 'Ñ' in dictionary_chars:
         MOST_COMMON = MOST_COMMON_SPANISH
     else:
         MOST_COMMON = MOST_COMMON_ENGLISH
-    most_common_indexes = [dictionary_char_to_index.get(c) for c in MOST_COMMON]
+    most_common_indexes = [dictionary_char_to_index.get(c) for c in most_common_characters]
+    character_index = dictionary_char_to_index.get(MOST_COMMON[0])
+    probable_characters = []
+
+    for i in most_common_indexes:
+        j = (i - character_index) % dictionary_length
+        probable_characters.append(dictionary_index_to_char.get(j))
+    return probable_characters
+
+def guess_probable_characters_from_most_common(character, key_length, dictionary_char_to_index, dictionary_index_to_char):
+    dictionary_chars = dictionary_char_to_index.keys()
+    dictionary_length = len(dictionary_chars)
+    if 'Ñ' in dictionary_chars:
+        MOST_COMMON = MOST_COMMON_SPANISH
+    else:
+        MOST_COMMON = MOST_COMMON_ENGLISH
+    most_common_indexes = [dictionary_char_to_index.get(c) for c in MOST_COMMON[:5]]
     character_index = dictionary_char_to_index.get(character)
     probable_characters = []
     for i in most_common_indexes:
@@ -103,7 +131,7 @@ def get_key_lengths(ciphertext):
     # Find out the sequences of 3 to 6 letters that occur multiple times
     # in the ciphertext. repeated_sequences_spacings has a value like:
     # {'EXG': [192], 'NAF': [339, 972, 633], ... }
-    ciphertext_sample = ciphertext[:5000]
+    ciphertext_sample = ciphertext[:1000]
     repeated_sequences_spacings = get_repeated_sequences_with_spacings(ciphertext_sample, 3, 6)
 
     # Get factors for each sequence spacing
@@ -123,7 +151,7 @@ def get_key_lengths(ciphertext):
             factors_by_count[factor] += 1
     key_lenghts = [k for (k, v) in sorted(factors_by_count.items(), key=lambda item: item[1], reverse=True)]
 
-    print(key_lenghts)
+    logger.info(key_lenghts)
     return key_lenghts
 
 def get_repeated_sequences_with_spacings(proccessed_text, min_length, max_length):
@@ -173,13 +201,11 @@ def encrypt(plaintext, key, dictionary_char_to_index, dictionary_index_to_char):
         ciphertext += dictionary_index_to_char.get(value)
     return ciphertext
 
-def decrypt(ciphertext, key, dictionary_char_to_index, dictionary_index_to_char):
-    dictionary_length = len(dictionary_char_to_index.keys())
+def decrypt(ciphertext_indexes, ciphertext_length, key, dictionary_length, dictionary_char_to_index, dictionary_index_to_char):
     key_length = len(key)
     key_indexes = [dictionary_char_to_index.get(c) for c in key]
-    ciphertext_indexes = [dictionary_char_to_index.get(c) for c in ciphertext]
     plaintext = ''
-    for i in range(len(ciphertext_indexes)):
+    for i in range(ciphertext_length):
         value = (ciphertext_indexes[i] - key_indexes[i % key_length]) % dictionary_length
         plaintext += dictionary_index_to_char.get(value)
     return plaintext
