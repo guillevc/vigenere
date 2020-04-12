@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import argparse
 import itertools
 import hashlib
@@ -19,7 +17,7 @@ MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U
 MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
 
 def main():
-    parser = argparse.ArgumentParser(description='Hacking Vigenère cipher. Attempts to guess the key of a encrypted input and uses a hash of the uncrypted text to check if it was successful. A dictionary with the characters used in the text must be provided.', add_help=True)
+    parser = argparse.ArgumentParser(description='Attacking Vigenère cipher. Attempts to guess the key of a encrypted input and uses a hash of the uncrypted text to check if it was successful. A dictionary with the characters used in the text must be provided.', add_help=True)
     parser.add_argument('-i', '--input', metavar='INPUT', nargs='?', type=argparse.FileType(),
         help='Path for the input file', required=True)
     parser.add_argument('-d', '--dictionary', metavar='DICTIONARY', nargs='?', type=argparse.FileType(),
