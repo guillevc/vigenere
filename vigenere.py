@@ -12,41 +12,35 @@ import collections
 
 logger = logging.getLogger(__name__)
 
-MAX_KEY_LENGTH = 10
+DEFAULT_MAX_KEY_LENGTH = 10
+MAX_KEY_LENGTH = DEFAULT_MAX_KEY_LENGTH
+CIPHERTEXT_SAMPLE_SIZE_FOR_SEQUENCES_COUNTING = 500
 MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U', 'M', 'P', 'B', 'G', 'V', 'Y', 'Q', 'H', 'F', 'Z', 'J', 'Ñ', 'X', 'K', 'W']
 MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
 
 def main():
-    parser = argparse.ArgumentParser(description='Algorithm for cypher and decypher texts.',
-        add_help=True)
+    parser = argparse.ArgumentParser(description='Hacking Vigenère cipher. Attempts to guess the key of a encrypted input and uses a hash of the uncrypted text to check if it was successful. A dictionary with the characters used in the text must be provided.', add_help=True)
     parser.add_argument('-i', '--input', metavar='INPUT', nargs='?', type=argparse.FileType(),
-        help='Path for the input file.', required=True)
+        help='Path for the input file', required=True)
     parser.add_argument('-d', '--dictionary', metavar='DICTIONARY', nargs='?', type=argparse.FileType(),
-        help='Path for the dictionary file.', required=True)
+        help='Path for the dictionary file', required=True)
     parser.add_argument('--hash', metavar='HASH', nargs='?', type=argparse.FileType(),
-        help='Path for the hash file.', required=True)
-    parser.add_argument(
-        '--debug',
-        help="Print lots of debugging statements",
-        action="store_const", dest="loglevel", const=logging.DEBUG,
-        default=logging.WARNING
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        help="Be verbose",
-        action="store_const", dest="loglevel", const=logging.INFO
-    )
+        help='Path for the hash file', required=True)
+    parser.add_argument('--max-key-length', metavar='max_key_length', type=int,
+        default=DEFAULT_MAX_KEY_LENGTH, help='Maximum key length (default: %(default)s). Less is faster.')
+    parser.add_argument('-v', '--verbose',  help='Be verbose',
+        action='store_const', dest='loglevel', const=logging.INFO)
+    parser.add_argument('--debug', help='Print lots of debugging statements',
+        action='store_const', dest='loglevel', const=logging.DEBUG, default=logging.WARNING)
     args = parser.parse_args()
 
     logging.basicConfig(format='%(levelname)s: %(message)s', level=args.loglevel)
 
+    global MAX_KEY_LENGTH
+    MAX_KEY_LENGTH = args.max_key_length
     proccessed_text = args.input.read().strip()
     dictionary_text = args.dictionary.read().strip()
     hash_text = args.hash.read().strip()
-
-    # proccessed_text = 'CUMDILHUQPCRLNXAYNQGZWQZCYECILNLXANNGCQZFNRSSSUSEBQPUSPHREIOFVKTMGEBDGCBECLDXZEUNCJDCJDEOZWFXMFNNEZNWDDMSZCSFHKPMRLLZYMNXCRAUHOQGTFDDILPMHXJKPLZYMNXQZCYLLSKZWJEBDDSREYLTHZHUXHBHNBHDHNEXHQZHNOKEZNCUJYIVWYCRYZMFDAYQDIMEIQPPDCMDXIQPUCGUMNYCXUKHUQPORPMZEYBSHHBODNUKWYCNLXANNGCQLFDINNCNHZHHYQGTWGTNDYWQJJSDNGPPHNNHXMETFDDGZVCMRNGPGHYUBNYRDCAWYZYXCPGZYXRLLZYMNXJZJGDYNSZXDNLXANSSYLTHZALNAYQWSHXJKPGDYNDOWQJJSZPHCUKPRSZLSTIMLNSLWJCYBZPDCCMRNGPZHWYRHCSSITENGPXDNLXANHZHJPSHDUMTHSCUBEUAWYOCIAWYLLHCOCEQCBFFSEISCUBPXHRCSLFBFLQPHBTYRDOBSURFEZDBNCVHEWNTHZYXNEBDCWQJJSZWTCLDYWXLLDFMDOZNCNGPLZYMNXMLLEHYASCUBTHFLHCALNDYBFNHYASSYOPLOPNQLNNCMCTZETWTWNQLHRZGVLLDLNSLWJDUQPNXACBLFKJWZCLHPXNFNTDCMRUSCIILHSSUSTMCTMFFCRPXZDUKPAHECLLNDQCKPNGLNSSYTDYQTMSCCBVYCTHSZXNHHKZUCTHFZLNAYMTHFHBDYCSLLQTPDDURLHDXUHWUSEUBSGDYNGZQDGYQZHDSCFSJQZZHWYDIULAFDEBDHUMYUBCSVZLLELZGYKWYCLOSZGZECBLFKJVDEQDPHBZGOFNDCMVTNGZOSFMDCCMEYQLWSTIMDNZCNHYAECILLLNFHCEBDFMDZZQLHRZGVLLDDWZXMGLMFCIVYCMEYQYUSTIMLFKJNGPLDHYQPGHWFHZHQLHRZGVLLDLNSLWJDCMEBDQCQDNRTRLZHSSMNQNGTMLLLJDUHYWQPURPIUPLSSCRDULPNHXYECULPCMTHIFHDGYMOIQXWZQYDCYKPURPXCLNZDBNHCMRNGLNHEBZOWNWFDNNDOGNCYSSUMOITMFDEBDYOLMYQZZRLGOWYRZZQLHRZGVLLDEBZEKTLLSPLSSUMTNGLXHYNGPMZXYPFUQEYQZZSSYOCYUTITDSDLLBCSOEIKZWJPLVLMOLLSTWTWUQWSRFWBPMRQOKALNNOQTHFLHDDNHXUSPXTDGHWFHZHAPZNCYHEQZDNZVYMOIVYVXLOSSIQTNHPMZYXBCSOEIVLFKHURPMSTGZEYCMSSSYTDZDOYQLFAFLDLONQCMGYRECFLNHZHEMCSZBZGYZNWQFYCZPDCORXCKWCNYVXUOMP'
-    # dictionary_text = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    # hash_text = '00c6d6db4c17e3bf8d8cbf972ad5a3bd417eff5d120ca65ddf60fa9b7b33463d'
 
     dictionary_char_to_index = {char: index for index, char in enumerate(dictionary_text)}
     dictionary_index_to_char = {index: char for index, char in enumerate(dictionary_text)}
@@ -75,7 +69,6 @@ def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to
         top_most_common_characters = [c for (c, _) in most_common_characters(col, 5)]
         logger.debug('most common of row {}: {}'.format(i, top_most_common_characters))
         most_common_character = most_common_characters(col, 1)[0][0]
-        #probable_characters = guess_probable_characters_from_top_most_common(top_most_common_characters, key_length, dictionary_char_to_index, dictionary_index_to_char)
         probable_characters = guess_probable_characters_from_most_common(most_common_character, key_length, dictionary_char_to_index, dictionary_index_to_char)
         probable_characters_every_row.append(probable_characters)
 
@@ -92,22 +85,6 @@ def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to
         hashed_message = hashlib.sha256(decrypted_text.encode('utf-8')).hexdigest()
         if (hashed_message == hash_text):
             return key
-
-def guess_probable_characters_from_top_most_common(most_common_characters, key_length, dictionary_char_to_index, dictionary_index_to_char):
-    dictionary_chars = dictionary_char_to_index.keys()
-    dictionary_length = len(dictionary_chars)
-    if 'Ñ' in dictionary_chars:
-        MOST_COMMON = MOST_COMMON_SPANISH
-    else:
-        MOST_COMMON = MOST_COMMON_ENGLISH
-    most_common_indexes = [dictionary_char_to_index.get(c) for c in most_common_characters]
-    character_index = dictionary_char_to_index.get(MOST_COMMON[0])
-    probable_characters = []
-
-    for i in most_common_indexes:
-        j = (i - character_index) % dictionary_length
-        probable_characters.append(dictionary_index_to_char.get(j))
-    return probable_characters
 
 def guess_probable_characters_from_most_common(character, key_length, dictionary_char_to_index, dictionary_index_to_char):
     dictionary_chars = dictionary_char_to_index.keys()
@@ -128,10 +105,12 @@ def most_common_characters(text, count):
     return collections.Counter(text).most_common(count)
 
 def get_key_lengths(ciphertext):
-    # Find out the sequences of 3 to 6 letters that occur multiple times
-    # in the ciphertext. repeated_sequences_spacings has a value like:
-    # {'EXG': [192], 'NAF': [339, 972, 633], ... }
-    ciphertext_sample = ciphertext[:1000]
+    '''
+    Find out the sequences of 3 to 6 letters that occur multiple times
+    in the ciphertext. repeated_sequences_spacings has a value like:
+    {'EXG': [192], 'NAF': [339, 972, 633], ... }
+    '''
+    ciphertext_sample = ciphertext[:CIPHERTEXT_SAMPLE_SIZE_FOR_SEQUENCES_COUNTING]
     repeated_sequences_spacings = get_repeated_sequences_with_spacings(ciphertext_sample, 3, 6)
 
     # Get factors for each sequence spacing
@@ -170,9 +149,11 @@ def get_repeated_sequences_with_spacings(proccessed_text, min_length, max_length
 
 # TODO: refactorizar
 def get_factors(num):
-    # Returns a list of useful factors of num. By "useful" we mean factors
-    # less than MAX_KEY_LENGTH + 1. For example, get_useful_factors(144)
-    # returns [2, 72, 3, 48, 4, 36, 6, 24, 8, 18, 9, 16, 12]
+    '''
+    Returns a list of useful factors of num. By 'useful' we mean factors
+    less than MAX_KEY_LENGTH + 1. For example, get_useful_factors(144)
+    returns [2, 72, 3, 48, 4, 36, 6, 24, 8, 18, 9, 16, 12]
+    '''
 
     if num < 2:
         return [] # numbers less than 2 have no useful factors
