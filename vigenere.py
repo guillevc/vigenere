@@ -13,6 +13,14 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_KEY_LENGTH = 10
 MAX_KEY_LENGTH = DEFAULT_MAX_KEY_LENGTH
 CIPHERTEXT_SAMPLE_SIZE_FOR_SEQUENCES_COUNTING = 500
+
+# Before trying with all combinations, a subset of characters will be used to calculate the key.
+# This number indicates how many will be used.
+# For example, if this is 5, all combinations of the 5 most probable values of each key character will be used.
+# In the same example, if the key length being calculated is 3, 5*5*5 combinations will be tested before trying
+# with the next most probably key length, if the key hasn't been found yet.
+NUMBER_OF_MOST_PROBABLE_CHARACTERS_TO_TEST_FIRST = 5
+
 MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U', 'M', 'P', 'B', 'G', 'V', 'Y', 'Q', 'H', 'F', 'Z', 'J', 'Ñ', 'X', 'K', 'W']
 MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
 
@@ -45,21 +53,29 @@ def main():
 
     start_time = time.time()
     key = guess_key(proccessed_text, dictionary_text, dictionary_char_to_index, dictionary_index_to_char, hash_text)
-    print('Successfully guessed key {} in {} seconds'.format(key, time.time() - start_time))
+    if key != None:
+        print('Successfully guessed key {} in {} seconds'.format(key, time.time() - start_time))
+    else:
+        print('Key couldn\'t be guessed')
 
 def guess_key(ciphertext, dictionary, dictionary_char_to_index, dictionary_index_to_char, hash_text):
     key_lenghts = get_key_lengths(ciphertext)
     logger.info('These are the key lengths guessed {}'.format(key_lenghts))
 
     for key_length in key_lenghts:
-
         logger.info('Attempting with key length of {}...'.format(key_length))
-        key = guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to_index, dictionary_index_to_char, hash_text)
+        key = guess_key_attempt_with_key_length(ciphertext, key_length, NUMBER_OF_MOST_PROBABLE_CHARACTERS_TO_TEST_FIRST, dictionary_char_to_index, dictionary_index_to_char, hash_text)
+        if (key != None):
+            return key
+    logger.info('Naive approach failed, testing all possible combinations.')
+    for key_length in key_lenghts:
+        logger.info('Attempting all combinations with key length of {}...'.format(key_length))
+        key = guess_key_attempt_with_key_length(ciphertext, key_length, len(dictionary), dictionary_char_to_index, dictionary_index_to_char, hash_text)
         if (key != None):
             return key
     return None
 
-def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to_index, dictionary_index_to_char, hash_text):
+def guess_key_attempt_with_key_length(ciphertext, key_length, number_of_most_probable_characters_to_test, dictionary_char_to_index, dictionary_index_to_char, hash_text):
     probable_characters_every_row = []
     for i in range(key_length):
         ciphertext_sample = ciphertext
@@ -67,7 +83,7 @@ def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to
         top_most_common_characters = [c for (c, _) in most_common_characters(col, 5)]
         logger.debug('most common of row {}: {}'.format(i, top_most_common_characters))
         most_common_character = most_common_characters(col, 1)[0][0]
-        probable_characters = guess_probable_characters_from_most_common(most_common_character, key_length, dictionary_char_to_index, dictionary_index_to_char)
+        probable_characters = guess_probable_characters_from_most_common(most_common_character, dictionary_char_to_index, dictionary_index_to_char)
         probable_characters_every_row.append(probable_characters)
 
     logger.info('Probable characters for each key index are {}'.format(probable_characters_every_row))
@@ -76,7 +92,8 @@ def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to
     ciphertext_lenght = len(ciphertext)
     dictionary_length = len(dictionary_char_to_index.keys())
 
-    for combination in itertools.product(*probable_characters_every_row):
+    # First naive combinations, should work in most of the cases
+    for combination in itertools.product(*[row_characters[:number_of_most_probable_characters_to_test] for row_characters in probable_characters_every_row]):
         key = ''.join(combination)
         logger.debug(key)
         decrypted_text = decrypt(ciphertext_indexes, ciphertext_lenght, key, dictionary_length, dictionary_char_to_index, dictionary_index_to_char)
@@ -84,14 +101,16 @@ def guess_key_attempt_with_key_length(ciphertext, key_length, dictionary_char_to
         if (hashed_message == hash_text):
             return key
 
-def guess_probable_characters_from_most_common(character, key_length, dictionary_char_to_index, dictionary_index_to_char):
+    # Bruteforce all possible combinations if the key hasnt been found
+
+def guess_probable_characters_from_most_common(character, dictionary_char_to_index, dictionary_index_to_char):
     dictionary_chars = dictionary_char_to_index.keys()
     dictionary_length = len(dictionary_chars)
     if 'Ñ' in dictionary_chars:
-        MOST_COMMON = MOST_COMMON_SPANISH
+        MOST_COMMON_LANGUAGE = MOST_COMMON_SPANISH
     else:
-        MOST_COMMON = MOST_COMMON_ENGLISH
-    most_common_indexes = [dictionary_char_to_index.get(c) for c in MOST_COMMON[:5]]
+        MOST_COMMON_LANGUAGE = MOST_COMMON_ENGLISH
+    most_common_indexes = [dictionary_char_to_index.get(c) for c in MOST_COMMON_LANGUAGE]
     character_index = dictionary_char_to_index.get(character)
     probable_characters = []
     for i in most_common_indexes:
@@ -128,7 +147,6 @@ def get_key_lengths(ciphertext):
             factors_by_count[factor] += 1
     key_lenghts = [k for (k, v) in sorted(factors_by_count.items(), key=lambda item: item[1], reverse=True)]
 
-    logger.info(key_lenghts)
     return key_lenghts
 
 def get_repeated_sequences_with_spacings(proccessed_text, min_length, max_length):
@@ -168,7 +186,6 @@ def get_factors(num):
         factors.remove(1)
     return list(set(factors))
 
-# Source: https://gist.github.com/dssstr/aedbb5e9f2185f366c6d6b50fad3e4a4
 def encrypt(plaintext, key, dictionary_char_to_index, dictionary_index_to_char):
     dictionary_length = len(dictionary_char_to_index.keys())
     key_length = len(key)
