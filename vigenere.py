@@ -19,7 +19,7 @@ CIPHERTEXT_SAMPLE_SIZE_FOR_SEQUENCES_COUNTING = 500
 # For example, if this is 5, all combinations of the 5 most probable values of each key character will be used.
 # In the same example, if the key length being calculated is 3, 5*5*5 combinations will be tested before trying
 # with the next most probably key length, if the key hasn't been found yet.
-NUMBER_OF_MOST_PROBABLE_CHARACTERS_TO_TEST_FIRST = 5
+NUMBER_OF_MOST_PROBABLE_CHARACTERS_TO_TEST_FIRST = 4
 
 MOST_COMMON_SPANISH = ['E', 'A', 'O', 'S', 'R', 'N', 'I', 'D', 'L', 'C', 'T', 'U', 'M', 'P', 'B', 'G', 'V', 'Y', 'Q', 'H', 'F', 'Z', 'J', 'Ñ', 'X', 'K', 'W']
 MOST_COMMON_ENGLISH = ['E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', 'W', 'M', 'F', 'C', 'G', 'Y', 'P', 'B', 'K', 'V', 'J', 'X', 'Q', 'Z']
@@ -122,11 +122,6 @@ def most_common_characters(text, count):
     return collections.Counter(text).most_common(count)
 
 def get_key_lengths(ciphertext):
-    '''
-    Find out the sequences of 3 to 6 letters that occur multiple times
-    in the ciphertext. repeated_sequences_spacings has a value like:
-    {'EXG': [192], 'NAF': [339, 972, 633], ... }
-    '''
     ciphertext_sample = ciphertext[:CIPHERTEXT_SAMPLE_SIZE_FOR_SEQUENCES_COUNTING]
     repeated_sequences_spacings = get_repeated_sequences_with_spacings(ciphertext_sample, 3, 6)
 
@@ -150,6 +145,11 @@ def get_key_lengths(ciphertext):
     return key_lenghts
 
 def get_repeated_sequences_with_spacings(proccessed_text, min_length, max_length):
+    '''
+    Find out the sequences of `min_length` to `max_length` letters that occur multiple times
+    in the ciphertext. repeated_sequences_spacings has a value like:
+    {'EXG': [192], 'NAF': [339, 972, 633], ... }
+    '''
     sequences_spacings = {} #  e.g. {sequence, [spacings]}
     for sequence_len in range(min_length, max_length + 1):
         for seq_start in range(len(proccessed_text) - sequence_len):
